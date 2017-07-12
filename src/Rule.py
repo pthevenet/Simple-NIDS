@@ -1,51 +1,107 @@
-from Utils import *
+from ipaddress import *
 from scapy.all import *
 
-from displayPacket import *
+from Utils import *
+from Action import *
+from Protocol import *
+from IPNetwork import *
+from Ports import *
+from PrintPacket import *
 
 class Rule:
-    """A NIDS rule"""
+    """A NIDS rule."""
 
-    def __init__(self, string, action, protocol, srcIp, srcPorts, dstIp, dstPorts):
-        """Constructor"""
-        # TODO : include options in the constructor, make it easier (input string)
-        self.string = string
-        self.action = action
-        self.protocol = protocol
-        self.srcIps = srcIp
-        self.srcPorts = srcPorts
-        self.dstIps = dstIp
-        self.dstPorts = dstPorts
+    def __init__(self, str):
+        """Construct a rule from a string."""
 
-    def addOption(self, option, value):
-        if (option == "msg"):
-            self.msg = value
-        elif (option == "tos"):
-            self.tos = int(value)
-        elif (option == "len"):
-            self.len = int(value)
-        elif (option == "offset"):
-            self.offset = int(value)
-        elif (option == "seq"):
-            self.seq = int(value)
-        elif (option == "ack"):
-            self.ack = int(value)
-        elif (option == "flags"):
-            self.flags = value
-        elif (option == "http_request"):
-            self.http_request = value
-            # remove starting and ending ["]
-            if (self.http_request.endswith('"')):
-                self.http_request = self.http_request[:-1]
-            if (self.http_request.startswith('"')):
-                self.http_request = self.http_request[1:]
-        elif (option == "content"):
-            self.content = value;
-            # remove starting and ending ["]
-            if (self.content.endswith('"')):
-                self.content = self.content[:-1]
-            if (self.content.startswith('"')):
-                self.content = self.content[1:]
+        self.string = str
+
+        str = str.strip()
+        strs = str.split(' ')
+
+        if (len(strs) >= 7):
+            # action
+            if (strs[0] == "alert"):
+                self.action = Action.ALERT
+            else:
+                raise ValueError("Invalid rule : incorrect action : '" + strs[0] + "'.")
+
+            # protocol
+            protocol = 0
+            if (strs[1] == "tcp"):
+                self.protocol = Protocol.TCP
+            elif (strs[1] == "udp"):
+                self.protocol = Protocol.UDP
+            elif (strs[1] == "http"):
+                self.protocol = Protocol.HTTP
+            else:
+                raise ValueError("Invalid rule : incorrect protocol : '" + strs[1] + "'.")
+
+            # source ip and ports
+            try:
+                self.srcIps = IPNetwork(strs[2])
+            except:
+                raise ValueError("Invalid rule : incorrect source ips : '" + strs[2] + "'.")
+            try:
+                self.srcPorts = Ports(strs[3])
+            except:
+                raise ValueError("Invalid rule : incorrect source ports : '" + strs[3] + "'.")
+
+            # destination ip and ports
+            try:
+                self.dstIps = IPNetwork(strs[5])
+            except:
+                raise ValueError("Invalid rule : incorrect destination ips : '" + strs[5] + "'.")
+
+            try:
+                self.dstPorts = Ports(strs[6])
+            except:
+                raise ValueError("Invalid rule : incorrect destination ports : '" + strs[6] + "'.")
+
+            # Options
+            strs = str.split('(')
+            if (len(strs) >= 2):
+                # options may be present
+                opts = strs[1].split(';')
+                for opt in opts:
+                    kv = opt.split(':',1)
+                    if (len(kv) >= 2):
+                        option = kv[0].strip()
+                        value = kv[1].strip()
+
+                        if (option == "msg"):
+                            self.msg = value
+                        elif (option == "tos"):
+                            self.tos = int(value)
+                        elif (option == "len"):
+                            self.len = int(value)
+                        elif (option == "offset"):
+                            self.offset = int(value)
+                        elif (option == "seq"):
+                            self.seq = int(value)
+                        elif (option == "ack"):
+                            self.ack = int(value)
+                        elif (option == "flags"):
+                            self.flags = value
+                        elif (option == "http_request"):
+                            self.http_request = value
+                            # remove starting and ending ["]
+                            if (self.http_request.endswith('"')):
+                                self.http_request = self.http_request[:-1]
+                            if (self.http_request.startswith('"')):
+                                self.http_request = self.http_request[1:]
+                        elif (option == "content"):
+                            self.content = value;
+                            # remove starting and ending ["]
+                            if (self.content.endswith('"')):
+                                self.content = self.content[:-1]
+                            if (self.content.startswith('"')):
+                                self.content = self.content[1:]
+                        else:
+                            raise ValueError("Invalid rule : incorrect option : '" + option + "'.")
+            # Done
+        else:
+            raise ValueError("Invalid rule : a rule must include mandatory elements : action protocol src_ips src_ports -> dst_ips dst_ports")
 
     def __repr__(self):
         """Returns the string representing the Rule"""
@@ -126,42 +182,52 @@ class Rule:
         """ Return True if and only if all options are matched """
 
         # TODO : change hasattr to try except
-        if (hasattr(self, "tos")):
+        try:
             if (IP in pkt):
                 if (self.tos != int(pkt[IP].tos)):
                     return False
             else:
                 return False
+        except AttributeError:
+            pass
 
-        if (hasattr(self, "len")):
+        try:
             if (IP in pkt):
                 if (self.len != int(pkt[IP].ihl)):
                     return False
             else:
                 return False
+        except AttributeError:
+            pass
 
-        if (hasattr(self, "offset")):
+        try:
             if (IP in pkt):
                 if (self.offset != int(pkt[IP].frag)):
                     return False
             else:
                 return False
+        except AttributeError:
+            pass
 
-        if (hasattr(self, "seq")):
+        try:
             if (TCP not in pkt):
                 return False
             else:
                 if (self.seq != int(pkt[TCP].seq)):
                     return False
+        except AttributeError:
+            pass
 
-        if (hasattr(self, "ack")):
+        try:
             if (TCP not in pkt):
                 return False
             else:
                 if (self.ack != int(pkt[TCP].ack)):
                     return False
+        except AttributeError:
+            pass
 
-        if (hasattr(self, "flags")):
+        try:
             # match if and only if the received packet has all the rule flags set
             if (TCP not in pkt):
                 return False
@@ -170,8 +236,11 @@ class Rule:
                     pktFlags = pkt[TCP].underlayer.sprintf("%TCP.flags%")
                     if (c not in pktFlags):
                         return False
+        except AttributeError:
+            pass
 
-        if (hasattr(self, "http_request")):
+
+        try:
             if (not isHTTP(pkt)):
                 return False
             elif (TCP in pkt and pkt[TCP].payload):
@@ -181,8 +250,10 @@ class Rule:
                     return False
             else:
                 return False
+        except AttributeError:
+            pass
 
-        if (hasattr(self, "content")):
+        try:
             payload = None
             if (TCP in pkt):
                 payload = pkt[TCP].payload
@@ -193,27 +264,7 @@ class Rule:
                     return False
             else:
                 return False
+        except AttributeError:
+            pass
 
         return True
-
-
-    def printOptions(self):
-        # TODO : hasattr -> try / except
-        if (hasattr(self, "msg")):
-            print self.msg
-        if (hasattr(self, "tos")):
-            print self.tos
-        if (hasattr(self, "len")):
-            print self.len
-        if (hasattr(self, "offset")):
-            print self.offset
-        if (hasattr(self, "seq")):
-            print self.seq
-        if (hasattr(self, "ack")):
-            print self.ack
-        if (hasattr(self, "flags")):
-            print self.flags
-        if (hasattr(self, "http_request")):
-            print self.http_request
-        if (hasattr(self, "content")):
-            print self.content
