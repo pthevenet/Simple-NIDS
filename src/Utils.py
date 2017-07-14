@@ -9,6 +9,7 @@ def isHTTP(pkt):
         words = data.split('/')
         if (len(words) >= 1 and words[0].rstrip() == "HTTP"):
             return True
+            
         words = data.split(' ')
         if (len(words) >= 1 and words[0].rstrip() in HTTPcommands):
             return True

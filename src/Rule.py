@@ -6,7 +6,7 @@ from Action import *
 from Protocol import *
 from IPNetwork import *
 from Ports import *
-from PrintPacket import *
+from PacketStrings import *
 
 class Rule:
     """A NIDS rule."""
@@ -181,53 +181,42 @@ class Rule:
     def checkOptions(self, pkt):
         """ Return True if and only if all options are matched """
 
-        # TODO : change hasattr to try except
-        try:
+        if (hasattr(self, "tos")):
             if (IP in pkt):
                 if (self.tos != int(pkt[IP].tos)):
                     return False
             else:
                 return False
-        except AttributeError:
-            pass
 
-        try:
+        if (hasattr(self, "len")):
             if (IP in pkt):
                 if (self.len != int(pkt[IP].ihl)):
                     return False
             else:
                 return False
-        except AttributeError:
-            pass
 
-        try:
+        if (hasattr(self, "offset")):
             if (IP in pkt):
                 if (self.offset != int(pkt[IP].frag)):
                     return False
             else:
                 return False
-        except AttributeError:
-            pass
 
-        try:
+        if (hasattr(self, "seq")):
             if (TCP not in pkt):
                 return False
             else:
                 if (self.seq != int(pkt[TCP].seq)):
                     return False
-        except AttributeError:
-            pass
 
-        try:
+        if (hasattr(self, "ack")):
             if (TCP not in pkt):
                 return False
             else:
                 if (self.ack != int(pkt[TCP].ack)):
                     return False
-        except AttributeError:
-            pass
 
-        try:
+        if (hasattr(self, "flags")):
             # match if and only if the received packet has all the rule flags set
             if (TCP not in pkt):
                 return False
@@ -236,11 +225,8 @@ class Rule:
                     pktFlags = pkt[TCP].underlayer.sprintf("%TCP.flags%")
                     if (c not in pktFlags):
                         return False
-        except AttributeError:
-            pass
 
-
-        try:
+        if (hasattr(self, "http_request")):
             if (not isHTTP(pkt)):
                 return False
             elif (TCP in pkt and pkt[TCP].payload):
@@ -250,10 +236,8 @@ class Rule:
                     return False
             else:
                 return False
-        except AttributeError:
-            pass
 
-        try:
+        if (hasattr(self, "content")):
             payload = None
             if (TCP in pkt):
                 payload = pkt[TCP].payload
@@ -264,7 +248,28 @@ class Rule:
                     return False
             else:
                 return False
-        except AttributeError:
-            pass
 
         return True
+
+    def getMatchedMessage(self, pkt):
+        """Return the message to be logged when the packet triggered the rule."""
+
+        error = ""
+        if (self.action == Action.ALERT):
+            error += "ALERT\n"
+
+        error += "Rule matched :\n" + str(self) + "\n"
+        error += "By packet :\n" + packetString(pkt) + "\n"
+
+        return error
+
+    def getMatchedPrintMessage(self, pkt):
+        """Return the message to be printed in the console when the packet triggered the rule."""
+        error = ""
+        if (self.action == Action.ALERT):
+            error += RED + "ALERT\n" + ENDC
+
+        error += "Rule matched :\n" + str(self) + "\n"
+        error += "By packet :\n" + matchedPacketString(pkt, self) + "\n"
+
+        return error

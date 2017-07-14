@@ -1,8 +1,11 @@
 from scapy.all import *
 from sys import argv
+import logging
+import datetime
+
 
 import RuleFileReader
-from PrintPacket import *
+from Sniffer import *
 
 RED = '\033[91m'
 BLUE = '\033[34m'
@@ -11,6 +14,9 @@ ENDC = '\033[0m'
 
 def main(filename):
     """Read the rule file and start listening."""
+
+    now = datetime.now()
+    logging.basicConfig(filename= "Simple-NIDS " + str(now) + '.log',level=logging.INFO)
 
     print "Simple-NIDS started."
     # Read the rule file
@@ -26,23 +32,12 @@ def main(filename):
         print str(errorCount) + " rules have errors and could not be read."
 
     # Begin sniffing
-    print "Sniffing started."
-    sniff(prn=inPacket, filter="", store=0)
-    print "Simple-NIDS stopped."
+    sniffer = Sniffer(ruleList)
+    sniffer.start()
 
 
-def inPacket(pkt):
-    """Directive for each received packet."""
-
-    for rule in ruleList:
-        # Check all rules
-        #print "checking rule"
-        matched = rule.match(pkt)
-        if (matched):
-            print RED + "Rule matched : " + ENDC + str(rule)
-            print RED + "By packet : " + ENDC
-            printMatchedPacket(pkt, rule)
-
+    #sniffer.stop()
+    #print "Simple-NIDS stopped."
 
 ruleList = list()
 script, filename = argv
