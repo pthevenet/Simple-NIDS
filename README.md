@@ -1,5 +1,5 @@
 # Simple-NIDS
-Simple Network Intrusion Detection System.  
+Simple Network Intrusion Detection System (signature based).  
 Written in Python with Scapy.
 
 # Install
@@ -16,3 +16,6 @@ and
 
 or
 > sudo python -B src/Simple-NIDS.py \<rule file\>
+
+# Stop
+> ctrl + shift + \
