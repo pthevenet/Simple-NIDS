@@ -34,8 +34,7 @@ def main(filename):
     # Begin sniffing
     sniffer = Sniffer(ruleList)
     sniffer.start()
-
-
+    
     #sniffer.stop()
     #print "Simple-NIDS stopped."
 

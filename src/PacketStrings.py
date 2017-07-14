@@ -31,7 +31,7 @@ def ipString(ip):
     return out
 
 def matchedIpString(ip, rule):
-    """Construct the human-readable string corresponding to the matched IP header."""
+    """Construct the human-readable string corresponding to the matched IP header, with matched fields in red."""
 
     out = "[IP HEADER]" + "\n"
     out += "\t Version: " + str(ip.version) + "\n"
@@ -93,7 +93,7 @@ def tcpString(tcp):
         return out
 
 def matchedTcpString(tcp, rule):
-    """Construct the human-readable string corresponding to the matched TCP header."""
+    """Construct the human-readable string corresponding to the matched TCP header, with matched fields in red."""
 
     out = "[TCP Header]" + "\n"
     if (hasattr(rule.srcPorts, "listPorts") and len(rule.srcPorts.listPorts) == 1):
@@ -128,13 +128,30 @@ def matchedTcpString(tcp, rule):
 
 def udpString(udp):
     """Construct the human-readable string corresponding to the UDP header."""
+
     out = "[UDP Header]" + "\n"
     out += "\t Source Port: " + str(udp.sport) + "\n"
     out += "\t Destination Port: " + str(udp.dport) + "\n"
     out += "\t Length: " + str(udp.len) + "\n"
     out += "\t Checksum: " + str(udp.chksum) + "\n"
+    return out
 
-# TODO : matched UDP !!
+def matchedUdpString(udp, rule):
+    """Construct the human-readable string corresponding to the UDP header, with matched fields in red."""
+
+    out = "[UDP Header]" + "\n"
+    if (hasattr(rule.srcPorts, "listPorts") and len(rule.srcPorts.listPorts) == 1):
+        out += RED + "\t Source Port: " + str(udp.sport) + ENDC + "\n"
+    else:
+        out += "\t Source Port: " + str(udp.sport) + "\n"
+    if (hasattr(rule.dstPorts, "listPorts") and len(rule.dstPorts.listPorts) == 1):
+        out += RED + "\t Destination Port: " + str(udp.dport) + ENDC + "\n"
+    else:
+        out += "\t Destination Port: " + str(udp.dport) + "\n"
+    out += "\t Length: " + str(udp.len) + "\n"
+    out += "\t Checksum: " + str(udp.chksum) + "\n"
+    return out
+
 
 def payloadString(pkt):
     """Construct the human-readable string corresponding to the payload."""
@@ -145,9 +162,13 @@ def payloadString(pkt):
         for line in lines:
             s += "\t" + line + "\n"
         out = s
-    return out
+        return out
+    else:
+        return ""
 
 def matchedTcpPayloadString(tcp, rule):
+    """Construct the human-readable string corresponding to the tcp payload, with matched fields in red."""
+
     out = "[TCP Payload]" + "\n"
 
     if (hasattr(rule, "http_request")):
@@ -166,27 +187,22 @@ def matchedTcpPayloadString(tcp, rule):
     else:
         return out + payloadString(tcp)
 
-def matchedPacketString(pkt, rule):
-    """Construct the human-readable string corresponding to the matched packet, from IP header to Application data."""
+def matchedUdpPayloadString(udp, rule):
+    """Construct the human-readable string corresponding to the udp payload, with matched fields in red."""
 
-    out = ""
-    if (IP in pkt):
-        # IP Header
-        out += matchedIpString(pkt[IP], rule)
-    elif (IPv6 in pkt):
-        # TODO
-        pass
-    if (TCP in pkt):
-        # TCP Header
-        out += matchedTcpString(pkt[TCP], rule)
-        # Payload
-        out += matchedTcpPayloadString(pkt[TCP], rule)
+    out = "[UDP Payload]" + "\n"
 
-    elif (UDP in pkt):
-        out += udpString(pkt[UDP])
-        out += "[UDP Payload]"
-        out += payloadString(pkt[UDP])
-    return out
+    if (hasattr(rule, "content") and udp.payload):
+        data = str(udp.payload)
+        # add red color when content found in the string
+        data = re.sub(rule.content, RED + rule.content + ENDC, data)
+        lines = data.splitlines()
+        s = ""
+        for line in lines:
+            s += "\t" + line + "\n"
+        out += s
+    else:
+        return out + payloadString(udp)
 
 def packetString(pkt):
     """Construct the human-readable string corresponding to the packet, from IP header to Application data."""
@@ -205,4 +221,25 @@ def packetString(pkt):
         out += udpString(pkt[UDP])
         out += "[UDP Payload]" + "\n"
         out += payloadString(pkt[UDP])
+    return out
+
+def matchedPacketString(pkt, rule):
+    """Construct the human-readable string corresponding to the matched packet, from IP header to Application data, with matched fields in red."""
+
+    out = ""
+    if (IP in pkt):
+        # IP Header
+        out += matchedIpString(pkt[IP], rule)
+    elif (IPv6 in pkt):
+        # TODO
+        pass
+    if (TCP in pkt):
+        # TCP Header
+        out += matchedTcpString(pkt[TCP], rule)
+        # Payload
+        out += matchedTcpPayloadString(pkt[TCP], rule)
+
+    elif (UDP in pkt):
+        out += matchedUdpString(pkt[UDP], rule)
+        out += matchedUdpPayloadString(pkt[UDP], rule)
     return out

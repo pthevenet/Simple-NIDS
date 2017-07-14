@@ -20,22 +20,11 @@ class Rule:
         strs = str.split(' ')
 
         if (len(strs) >= 7):
-            # action
-            if (strs[0] == "alert"):
-                self.action = Action.ALERT
-            else:
-                raise ValueError("Invalid rule : incorrect action : '" + strs[0] + "'.")
+
+            self.action = action(strs[0])
 
             # protocol
-            protocol = 0
-            if (strs[1] == "tcp"):
-                self.protocol = Protocol.TCP
-            elif (strs[1] == "udp"):
-                self.protocol = Protocol.UDP
-            elif (strs[1] == "http"):
-                self.protocol = Protocol.HTTP
-            else:
-                raise ValueError("Invalid rule : incorrect protocol : '" + strs[1] + "'.")
+            self.protocol = protocol(strs[1])
 
             # source ip and ports
             try:
@@ -61,6 +50,10 @@ class Rule:
             # Options
             strs = str.split('(')
             if (len(strs) >= 2):
+                # remove trailing ')' if present
+                if (strs[-1][-1] == ')'):
+                    strs[-1] = strs[-1][:-1]
+
                 # options may be present
                 opts = strs[1].split(';')
                 for opt in opts:
@@ -254,22 +247,27 @@ class Rule:
     def getMatchedMessage(self, pkt):
         """Return the message to be logged when the packet triggered the rule."""
 
-        error = ""
+        msg = ""
         if (self.action == Action.ALERT):
-            error += "ALERT\n"
+            msg += " ALERT "
+        if hasattr(self, "msg"):
+            msg += self.msg  + "\n"
 
-        error += "Rule matched :\n" + str(self) + "\n"
-        error += "By packet :\n" + packetString(pkt) + "\n"
+        msg += "Rule matched :\n" + str(self) + "\n"
+        msg += "By packet :\n" + packetString(pkt) + "\n"
 
-        return error
+        return msg
 
     def getMatchedPrintMessage(self, pkt):
         """Return the message to be printed in the console when the packet triggered the rule."""
-        error = ""
+        msg = ""
         if (self.action == Action.ALERT):
-            error += RED + "ALERT\n" + ENDC
+            msg += RED + "ALERT "
+        if hasattr(self, "msg"):
+            msg += self.msg
+        msg += "\n" + ENDC
 
-        error += "Rule matched :\n" + str(self) + "\n"
-        error += "By packet :\n" + matchedPacketString(pkt, self) + "\n"
+        msg += "Rule matched :\n" + str(self) + "\n"
+        msg += "By packet :\n" + matchedPacketString(pkt, self) + "\n"
 
-        return error
+        return msg

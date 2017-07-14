@@ -3,7 +3,6 @@ from scapy.all import *
 import logging
 
 import RuleFileReader
-from PacketStrings import *
 from Rule import *
 
 class Sniffer(Thread):
@@ -25,7 +24,7 @@ class Sniffer(Thread):
 
         for rule in self.ruleList:
             # Check all rules
-            #print "checking rule"
+            # print "checking rule"
             matched = rule.match(pkt)
             if (matched):
                 logMessage = rule.getMatchedMessage(pkt)
