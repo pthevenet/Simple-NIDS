@@ -1,0 +1,5 @@
+alert udp any any -> 8.8.8.8 53 (msg:"DNS to google")
+alert udp any any -> 8.8.8.4 53 (msg:"DNS to google")
+alert udp any any -> any 123 (msg:"NTP")
+alert tcp any any -> any 123 (msg:"NTP")
+alert tcp 192.168.0.1 any -> 192.168.0.0/16 any (msg:"Gateway to subnet")
